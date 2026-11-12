@@ -1,5 +1,5 @@
-location             = "centralindia"
-resource_group_name  = "rg-dev-centralindia"
+location             = "eastus"
+resource_group_name  = "rg-dev-eastus"
 vm_count             = 5
 vm_size              = "Standard_B2s"
 admin_username       = "azureuser"
