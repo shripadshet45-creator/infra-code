@@ -1,7 +1,7 @@
 location             = "eastus"
 resource_group_name  = "rg-dev-eastus"
 vm_count             = 5
-vm_size              = "Standard_B2s"
+vm_size              = "Standard_B2s_v2"
 admin_username       = "azureuser"
 allowed_admin_cidrs   = ["203.0.113.10/32"]
 allowed_inbound_ports = [22]
