@@ -12,21 +12,21 @@ resource "azurerm_resource_group" "rg" {
 
 # ---------- Network ----------
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-dev-centralindia"
+  name                = "vnet-dev-eastus"
   address_space       = var.vnet_address_space
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "snet-dev-centralindia"
+  name                 = "snet-dev-eastus"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = var.subnet_address_prefixes
 }
 
 resource "azurerm_network_security_group" "nsg" {
-  name                = "nsg-dev-centralindia"
+  name                = "nsg-dev-eastus"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -51,7 +51,7 @@ resource "azurerm_subnet_network_security_group_association" "nsg_assoc" {
 # ---------- NICs ----------
 resource "azurerm_network_interface" "nic" {
   count               = var.vm_count
-  name                = "nic-${count.index + 1}-centralindia"
+  name                = "nic-${count.index + 1}-eastus"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -65,7 +65,7 @@ resource "azurerm_network_interface" "nic" {
 # ---------- VMs ----------
 resource "azurerm_linux_virtual_machine" "vm" {
   count                 = var.vm_count
-  name                  = "vm-${count.index + 1}-centralindia"
+  name                  = "vm-${count.index + 1}-eastus"
   resource_group_name   = azurerm_resource_group.rg.name
   location              = var.location
   size                  = var.vm_size

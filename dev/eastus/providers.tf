@@ -16,7 +16,7 @@ terraform {
     resource_group_name  = "rg-tfstate"
     storage_account_name = "remotestate1"
     container_name       = "tfstate"
-    key                  = "dev/centralindia.tfstate"
+    key                  = "dev/eastus.tfstate"
     use_oidc             = true
   }
 }
