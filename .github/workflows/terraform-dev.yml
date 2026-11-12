@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        region: [centralindia]                                  # ← changed
+        region: [eastus]                                  # ← changed
     defaults:
       run:
         working-directory: dev/${{ matrix.region }}
@@ -50,7 +50,7 @@ jobs:
     environment: dev
     strategy:
       matrix:
-        region: [centralindia]                                  # ← changed
+        region: [eastus]                                  # ← changed
     defaults:
       run:
         working-directory: dev/${{ matrix.region }}
