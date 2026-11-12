@@ -1,0 +1,65 @@
+name: terraform-dev
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "dev/**"
+      - ".github/workflows/terraform-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+  TF_VAR_admin_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}   # ← changed
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        region: [centralindia]                                  # ← changed
+    defaults:
+      run:
+        working-directory: dev/${{ matrix.region }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init
+      - run: terraform validate
+      - run: terraform plan -out=tfplan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.region }}
+          path: dev/${{ matrix.region }}/tfplan
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        region: [centralindia]                                  # ← changed
+    defaults:
+      run:
+        working-directory: dev/${{ matrix.region }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ matrix.region }}
+          path: dev/${{ matrix.region }}
+      - run: terraform init
+      - run: terraform apply -auto-approve tfplan
