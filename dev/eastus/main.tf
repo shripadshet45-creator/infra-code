@@ -88,4 +88,16 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "22_04-lts-gen2"
     version   = "latest"
   }
+
+  
+}
+
+import {
+  to = azurerm_resource_group.test
+  id = "/subscriptions/48f67fa8-fc2a-4322-8697-c7dd9dad7c82/resourceGroups/test"
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "test"
+  location = "centralus"
 }
