@@ -12,7 +12,7 @@ variable "use_oidc" {
 variable "location" {
   description = "Azure region for the resource group and regional resources"
   type        = string
-  default     = "centralindia"
+  default     = "eastus"
 }
 
 variable "prefix" {
@@ -67,13 +67,13 @@ variable "kubernetes_version" {
 variable "system_node_vm_size" {
   description = "VM size for the system node pool"
   type        = string
-  default     = "Standard_B2s"
+  default     = "Standard_D2as_v7"
 }
 
 variable "user_node_vm_size" {
   description = "VM size for the user node pool"
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_D2as_v7"
 }
 
 
