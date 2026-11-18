@@ -18,3 +18,13 @@ output "kube_config" {
   value       = azurerm_kubernetes_cluster.aks.kube_config_raw
   sensitive   = true
 }
+
+output "key_vault_name" {
+  description = "Key Vault containing application secrets"
+  value       = azurerm_key_vault.main.name
+}
+
+output "account_service_identity_client_id" {
+  description = "Client ID of the account-service workload identity"
+  value       = azurerm_user_assigned_identity.account_service.client_id
+}

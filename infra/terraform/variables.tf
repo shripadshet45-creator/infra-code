@@ -76,4 +76,15 @@ variable "user_node_vm_size" {
   default     = "Standard_D2as_v7"
 }
 
+variable "key_vault_name" {
+  description = "Globally unique Key Vault name, 3-24 characters, using letters, numbers, and hyphens"
+  type        = string
+  default     = "kv-akslearn-shripad"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9-]{3,24}$", var.key_vault_name))
+    error_message = "key_vault_name must contain 3-24 letters, numbers, or hyphens."
+  }
+}
+
 

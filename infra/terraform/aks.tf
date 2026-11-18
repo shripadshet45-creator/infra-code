@@ -60,9 +60,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
+  # ---------- 7. KEY VAULT SECRETS PROVIDER ----------
+  key_vault_secrets_provider {
+    secret_rotation_enabled = true
+  }
+
   tags = var.tags
 
-  # ---------- 7. CREATE ROLES FIRST ----------
+  # ---------- 8. CREATE ROLES FIRST ----------
   depends_on = [
     azurerm_subnet.aks_nodes,
     azurerm_role_assignment.control_plane_subnet,
@@ -70,7 +75,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   ]
 }
 
-# ---------- 8. USER NODE POOL (your apps) ----------
+# ---------- 9. USER NODE POOL (your apps) ----------
 resource "azurerm_kubernetes_cluster_node_pool" "user" {
   name                  = "user"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
