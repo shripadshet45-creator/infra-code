@@ -64,6 +64,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   # ---------- 7. CREATE ROLES FIRST ----------
   depends_on = [
+    azurerm_subnet.aks_nodes,
     azurerm_role_assignment.control_plane_subnet,
     azurerm_role_assignment.control_plane_kubelet_operator,
   ]

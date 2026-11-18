@@ -19,6 +19,8 @@ resource "azurerm_role_assignment" "kubelet_acr_pull" {
   principal_id         = azurerm_user_assigned_identity.aks_kubelet.principal_id # WHO
   role_definition_name = "AcrPull"                                               # WHICH permission
   scope                = azurerm_container_registry.acr.id                       # ON WHAT
+
+  depends_on = [azurerm_container_registry.acr]
 }
 
 # 2. Control plane identity can manage the node subnet
