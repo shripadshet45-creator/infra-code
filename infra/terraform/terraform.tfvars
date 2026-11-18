@@ -1,4 +1,3 @@
-
 location        = "centralindia"
 prefix          = "aks-learning"
 
