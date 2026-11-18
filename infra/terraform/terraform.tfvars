@@ -1,5 +1,5 @@
-location        = "centralindia"
-prefix          = "aks-learning"
+location = "centralindia"
+prefix   = "aks-learning"
 
 vnet_address_space      = ["10.10.0.0/16"]
 aks_nodes_subnet_prefix = "10.10.0.0/22"
