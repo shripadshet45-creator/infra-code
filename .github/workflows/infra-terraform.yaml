@@ -6,12 +6,15 @@ name: Infra - Terraform
 
 on:
   pull_request:
-    paths: ["infra/terraform/**"]        # only run when Terraform files change
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/infra-terraform.yml"
   push:
     branches: [main]
-    paths: ["infra/terraform/**"]
-  workflow_dispatch:                      # "Run workflow" button in GitHub
-
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/infra-terraform.yml"
+  workflow_dispatch:
 permissions:
   id-token: write                         # lets GitHub get an OIDC token to log in to Azure (no password)
   contents: read                          # lets the job read (check out) the repo
