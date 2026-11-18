@@ -1,3 +1,8 @@
+variable "subscription_id" {
+  description = "Azure subscription ID where infrastructure will be created"
+  type        = string
+}
+
 variable "use_oidc" {
   description = "Use OIDC authentication for the AzureRM provider"
   type        = bool
