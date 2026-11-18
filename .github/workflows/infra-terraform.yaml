@@ -1,0 +1,91 @@
+# Runs Terraform for infra/terraform.
+#   Pull request  -> PLAN only (shows what WOULD change, changes nothing)
+#   Merge to main -> PLAN, then waits for your approval, then APPLY
+#   Manual button -> same as merge to main
+name: Infra - Terraform
+
+on:
+  pull_request:
+    paths: ["infra/terraform/**"]        # only run when Terraform files change
+  push:
+    branches: [main]
+    paths: ["infra/terraform/**"]
+  workflow_dispatch:                      # "Run workflow" button in GitHub
+
+permissions:
+  id-token: write                         # lets GitHub get an OIDC token to log in to Azure (no password)
+  contents: read                          # lets the job read (check out) the repo
+
+# Only one Terraform run at a time -> two runs never fight over the same state
+concurrency:
+  group: terraform-infra
+  cancel-in-progress: false
+
+env:
+  # Terraform's azurerm provider + backend read these ARM_* variables to log in
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"                    # log in with the OIDC token, not a client secret
+  ARM_USE_AZUREAD: "true"                 # backend reads the state with Entra ID (matches use_azuread_auth)
+  TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}   # fills var.subscription_id
+  TF_IN_AUTOMATION: "true"                # shorter output, no "next steps" hints
+
+defaults:
+  run:
+    working-directory: infra/terraform    # every "run" step runs inside this folder
+
+jobs:
+  # ---------------------------------------------------------------- PLAN
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false        # plain terraform output
+
+      - name: Init                        # download azurerm plugin + connect to remote state
+        run: terraform init -input=false
+
+      - name: Format check                # fails if files are not formatted (run "terraform fmt" locally)
+        run: terraform fmt -check -recursive
+
+      - name: Validate                    # syntax + references check, no Azure calls
+        run: terraform validate
+
+      - name: Plan                        # compare code vs state vs Azure, save the result to a file
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Save plan for the apply job
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/tfplan
+          retention-days: 1
+
+  # ---------------------------------------------------------------- APPLY
+  apply:
+    needs: plan                           # runs only if plan succeeded
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev              # GitHub pauses here until you click "Approve"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Download the saved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform
+
+      - name: Apply                       # applies EXACTLY the reviewed plan, nothing else
+        run: terraform apply -input=false tfplan
