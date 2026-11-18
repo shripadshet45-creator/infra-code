@@ -6,74 +6,36 @@ name: Infra - Terraform
 
 on:
   pull_request:
-    paths:
-      - "infra/terraform/**"
-      - ".github/workflows/infra-terraform.yml"
+    paths: ["infra/terraform/**"]
   push:
     branches: [main]
-    paths:
-      - "infra/terraform/**"
-      - ".github/workflows/infra-terraform.yml"
+    paths: ["infra/terraform/**"]
   workflow_dispatch:
-permissions:
-  id-token: write                         # lets GitHub get an OIDC token to log in to Azure (no password)
-  contents: read                          # lets the job read (check out) the repo
 
-# Only one Terraform run at a time -> two runs never fight over the same state
+permissions:
+  id-token: write
+  contents: read
+
 concurrency:
   group: terraform-infra
   cancel-in-progress: false
 
 env:
-  # Terraform's azurerm provider + backend read these ARM_* variables to log in
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  ARM_USE_OIDC: "true"                    # log in with the OIDC token, not a client secret
-  ARM_USE_AZUREAD: "true"                 # backend reads the state with Entra ID (matches use_azuread_auth)
-  TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}   # fills var.subscription_id
-  TF_IN_AUTOMATION: "true"                # shorter output, no "next steps" hints
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  TF_IN_AUTOMATION: "true"
 
 defaults:
   run:
-    working-directory: infra/terraform    # every "run" step runs inside this folder
+    working-directory: infra/terraform
 
 jobs:
-  # ---------------------------------------------------------------- PLAN
   plan:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false        # plain terraform output
-
-      - name: Init                        # download azurerm plugin + connect to remote state
-        run: terraform init -input=false
-
-      - name: Format check                # fails if files are not formatted (run "terraform fmt" locally)
-        run: terraform fmt -check -recursive
-
-      - name: Validate                    # syntax + references check, no Azure calls
-        run: terraform validate
-
-      - name: Plan                        # compare code vs state vs Azure, save the result to a file
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Save plan for the apply job
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: infra/terraform/tfplan
-          retention-days: 1
-
-  # ---------------------------------------------------------------- APPLY
-  apply:
-    needs: plan                           # runs only if plan succeeded
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    environment: dev              # GitHub pauses here until you click "Approve"
     steps:
       - uses: actions/checkout@v4
 
@@ -82,13 +44,54 @@ jobs:
           terraform_wrapper: false
 
       - name: Init
-        run: terraform init -input=false
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
+            -backend-config="key=aks-learning.tfstate" \
+            -backend-config="use_azuread_auth=true"
 
-      - name: Download the saved plan
-        uses: actions/download-artifact@v4
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/tfplan
+          retention-days: 1
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ secrets.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TFSTATE_CONTAINER }}" \
+            -backend-config="key=aks-learning.tfstate" \
+            -backend-config="use_azuread_auth=true"
+
+      - uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: infra/terraform
 
-      - name: Apply                       # applies EXACTLY the reviewed plan, nothing else
+      - name: Apply
         run: terraform apply -input=false tfplan
