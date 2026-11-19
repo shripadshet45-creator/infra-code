@@ -8,13 +8,13 @@ resource "azurerm_kubernetes_cluster" "aks" {
   sku_tier            = "Free"                   # control plane free, no SLA
   node_resource_group = "rg-${var.prefix}-nodes" # 2nd RG that Azure manages
 
-  automatic_upgrade_channel = "patch"     # auto 1.30.1 -> 1.30.2
+  automatic_upgrade_channel = "patch"     # auto 1.36.x patch upgrades
   node_os_upgrade_channel   = "NodeImage" # auto OS security patches
 
   # ---------- 2. SYSTEM NODE POOL ----------
   default_node_pool {
     name                         = "system"
-    vm_size                      = var.system_node_vm_size # Standard_B2s
+    vm_size                      = var.system_node_vm_size
     node_count                   = 1
     vnet_subnet_id               = azurerm_subnet.aks_nodes.id # nodes get IPs from OUR subnet
     os_disk_size_gb              = 64
@@ -56,7 +56,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     msi_auth_for_monitoring_enabled = true
   }
 
-  # ---------- 6. WORKLOAD IDENTITY (for Key Vault later) ----------
+  # ---------- 6. WORKLOAD IDENTITY ----------
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
@@ -65,9 +65,17 @@ resource "azurerm_kubernetes_cluster" "aks" {
     secret_rotation_enabled = true
   }
 
+  # ---------- 8. ISTIO (AKS managed add-on) ----------
+  service_mesh_profile {
+    mode                             = "Istio"
+    revisions                        = ["asm-1-31"]
+    internal_ingress_gateway_enabled = true  # private gateway: internal LB, IP from our subnet
+    external_ingress_gateway_enabled = false # no public gateway
+  }
+
   tags = var.tags
 
-  # ---------- 8. CREATE ROLES FIRST ----------
+  # ---------- 9. CREATE ROLES FIRST ----------
   depends_on = [
     azurerm_subnet.aks_nodes,
     azurerm_role_assignment.control_plane_subnet,
@@ -75,12 +83,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   ]
 }
 
-# ---------- 9. USER NODE POOL (your apps) ----------
+# ---------- 10. USER NODE POOL (your apps) ----------
 resource "azurerm_kubernetes_cluster_node_pool" "user" {
   name                  = "user"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
   mode                  = "User"
-  vm_size               = var.user_node_vm_size # Standard_B2ms
+  vm_size               = var.user_node_vm_size
   vnet_subnet_id        = azurerm_subnet.aks_nodes.id
   os_disk_size_gb       = 64
 
@@ -97,12 +105,4 @@ resource "azurerm_kubernetes_cluster_node_pool" "user" {
   }
 
   tags = var.tags
-}
-
-  # ---------- ISTIO (AKS managed add-on) ----------
-  service_mesh_profile {
-    mode                             = "Istio"
-    revisions                        = ["asm-1-31"]
-    internal_ingress_gateway_enabled = true
-    external_ingress_gateway_enabled = false
 }
