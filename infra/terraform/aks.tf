@@ -98,3 +98,11 @@ resource "azurerm_kubernetes_cluster_node_pool" "user" {
 
   tags = var.tags
 }
+
+  # ---------- ISTIO (AKS managed add-on) ----------
+  service_mesh_profile {
+    mode                             = "Istio"
+    revisions                        = ["asm-1-31"]
+    internal_ingress_gateway_enabled = true
+    external_ingress_gateway_enabled = false
+}

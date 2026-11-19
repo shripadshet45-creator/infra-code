@@ -1,0 +1,45 @@
+# Datadog Helm chart values for aks-aks-learning
+# Install:  helm install datadog datadog/datadog -n datadog -f values.yaml
+
+datadog:
+  site: datadoghq.com                   # CHANGE to your Datadog site (us5.datadoghq.com, datadoghq.eu ...)
+  apiKeyExistingSecret: datadog-secret  # API key read from a Kubernetes Secret (key name must be "api-key"), never from this file
+  clusterName: aks-aks-learning         # how the cluster is named in Datadog
+
+  logs:
+    enabled: true                       # collect container logs (stdout/stderr)
+    containerCollectAll: true           # from ALL containers. Turn off later and opt-in per pod to save cost
+
+  apm:
+    socketEnabled: true
+    instrumentation:
+      enabled: true
+      enabledNamespaces:
+        - money-movement              # accept traces from apps (needs the Java tracer in the app later)
+
+  processAgent:
+    enabled: true                       # live process list per node
+
+providers:
+  aks:
+    enabled: true                       # AKS-specific settings (kubelet access etc.)
+
+# Node agents = DaemonSet. Tolerate the system pool taint so we ALSO monitor the system node.
+agents:
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+  containers:
+    agent:
+      resources:
+        requests: { cpu: 100m, memory: 200Mi }
+        limits:   { memory: 400Mi }
+
+clusterAgent:
+  enabled: true
+  replicas: 1                           # 1 is enough for learning; production: 2
+  nodeSelector:
+    workload: apps                      # keep it on the user pool
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { memory: 256Mi }
